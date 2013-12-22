@@ -33,9 +33,11 @@ Observer.onWebSocketMessage = function(evt) {
                     case PeerConnection.DESCRIPTION_TYPE_OFFER:
                         console.log('Remote description set');
                         console.dir(sessionDescription);
-                        this.peer.setRemoteDescription(sessionDescription, function() {
-                            this.createAnswer(message.from, message.sdp);
-                        }.bind(this));
+                        if ( confirm('接続名：' + message.accessName + 'からCallが届いています。応答しますか？') ) {
+                            this.peer.setRemoteDescription(sessionDescription, function() {
+                                this.createAnswer(message.from, message.sdp);
+                            }.bind(this));
+                        }
                         break;
 
                     case PeerConnection.DESCRIPTION_TYPE_ANSWER:

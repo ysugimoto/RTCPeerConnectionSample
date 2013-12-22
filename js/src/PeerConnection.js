@@ -52,7 +52,8 @@ PeerConnection.prototype.createOffer = function(id) {
                 "sdp_type": PeerConnection.DESCRIPTION_TYPE_OFFER,
                 "sdp" :     description,
                 "to"  :     id,
-                "from":     uuid
+                "from":     uuid,
+                "accessName": accessName
             }));
         });
     }.bind(this));
