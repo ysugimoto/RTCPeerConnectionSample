@@ -19,5 +19,12 @@
     "grunt-sprockets": "~0.6.2",
     "grunt-contrib-cssmin": "~0.7.0",
     "grunt-sass": "~0.9.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ysugimoto/RTCPeerConnectionSample.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ysugimoto/RTCPeerConnectionSample/issues"
   }
 }

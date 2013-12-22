@@ -1,0 +1,14 @@
+{
+  "name": "server",
+  "version": "0.1.0",
+  "description": "WebRTC-Signalling server sample",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Yoshiaki Sugimoto",
+  "license": "MIT",
+  "dependencies": {
+    "websocket.io": "~0.2.1"
+  }
+}
