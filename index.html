@@ -1,0 +1,44 @@
+<!--
+やあ (´・ω・｀)
+ようこそ、WebRTCのサンプルへ。
+このソースコードはサービスだから、まず読んで落ち着いて欲しい。
+
+うん、「JavaScriptファイルは圧縮している」んだ。済まない。
+仏の顔もって言うしね、謝って許してもらおうとも思っていない。
+
+でも、このソースコードを見たとき、君は、きっと言葉では言い表せない
+「idつけすぎじゃね？」みたいなものを感じてくれたと思う。
+殺伐とした世の中で、そういう気持ちを忘れないで欲しい
+そう思って、このソースコードを作ったんだ。
+
+じゃあ、githubを見ようか。
+http://
+
+
+-->
+<!doctype html>
+<html lang="ja">
+<head>
+    <meta charset="utf8">
+    <link rel="stylesheet" href="css/application.min.css" type="text/css">
+</head>
+<body>
+    <div id="uuid">
+       <img src="logoimage.png">
+    </div>
+    <div id="wrapper">
+        <section class="video">
+            <video id="remoteVideo" autoplay="true" control></video>
+            <video id="localVideo" autoplay="true" control></video>
+        </section>
+        <section id="chatSection">
+            <div class="post"></div>
+            <div class="chatPost">
+                <textarea id="chat" disabled placeholder="input here"></textarea>
+            </div>
+        </section>
+    </div>
+    <ul id="members"></ul>
+    <script src="js/application.min.js"></script>
+</body>
+</html>
