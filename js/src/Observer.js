@@ -29,7 +29,7 @@ Observer.onWebSocketMessage = function(evt) {
         case PeerConnection.MESSAGE_TYPE_SDP:
             sessionDescription = new RTCSessionDescription(message.sdp);
             if ( message.to && message.to === uuid ) {
-                switch ( message.sdp_type ) {
+                switch ( sessionDescription.type ) {
                     case PeerConnection.DESCRIPTION_TYPE_OFFER:
                         console.log('Remote description set');
                         console.dir(sessionDescription);

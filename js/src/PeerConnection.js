@@ -49,7 +49,6 @@ PeerConnection.prototype.createOffer = function(id) {
         this.peer.setLocalDescription(description, function() {
             websocket.send(JSON.stringify({
                 "type":     PeerConnection.MESSAGE_TYPE_SDP,
-                "sdp_type": PeerConnection.DESCRIPTION_TYPE_OFFER,
                 "sdp" :     description,
                 "to"  :     id,
                 "from":     uuid,
@@ -65,7 +64,6 @@ PeerConnection.prototype.createAnswer = function(id, sdp) {
         this.peer.setLocalDescription(description, function() {
             websocket.send(JSON.stringify({
                 "type":     PeerConnection.MESSAGE_TYPE_SDP,
-                "sdp_type": PeerConnection.DESCRIPTION_TYPE_ANSWER,
                 "sdp" :     description,
                 "to"  :     id,
                 "from":     uuid
