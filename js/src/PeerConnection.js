@@ -2,8 +2,11 @@
 // Peer Connection class
 // ====================================================
 function PeerConnection(observer) {
-    this.observer = this.bindObserver(observer);
-    this.peer     = new webkitRTCPeerConnection({"iceServers": server});
+    this.observer    = this.bindObserver(observer);
+    this.peer        = new webkitRTCPeerConnection({"iceServers": server});
+    this.connected   = false;
+    this.personID    = null;
+    this.dataChannel = null;
 
     this.init();
     this.getUserMedia();
@@ -19,9 +22,16 @@ PeerConnection.MEMBER_ADDED            = "member-added";
 PeerConnection.MEMBER_REMOVED          = "member-removed";
 
 PeerConnection.prototype.init = function() {
-    this.peer.onicecandidate = this.observer.onIceCandidate;
-    this.peer.onaddstream    = this.observer.onAddStream;
-    websocket.onmessage      = this.observer.onWebSocketMessage;
+    this.peer.onicecandidate      = this.observer.onIceCandidate;
+    this.peer.onaddstream         = this.observer.onAddStream;
+    this.peer.onnegotiationneeded = this.observer.onNegotiationNeeded;
+    websocket.onmessage           = this.observer.onWebSocketMessage;
+};
+
+PeerConnection.prototype.initChannel = function() {
+    console.log('Initialized channel');
+    this.dataChannel.onopen    = this.observer.onDataChannelOpened  || function() {};
+    this.dataChannel.onmessage = this.observer.onDataChannelMessage || function() {};
 };
 
 PeerConnection.prototype.close = function() {
@@ -45,7 +55,10 @@ PeerConnection.prototype.addIceCandidate = function(candidate) {
 
 PeerConnection.prototype.createOffer = function(id) {
     console.log('Offer send: ' + id);
+    // crate data channel
+    this.createDataChannel();
     this.peer.createOffer(function(description) {
+        console.log('Offered SDP:' + description);
         this.peer.setLocalDescription(description, function() {
             websocket.send(JSON.stringify({
                 "type":     PeerConnection.MESSAGE_TYPE_SDP,
@@ -55,12 +68,14 @@ PeerConnection.prototype.createOffer = function(id) {
                 "accessName": accessName
             }));
         });
+        this.personID = id;
     }.bind(this));
 };
 
 PeerConnection.prototype.createAnswer = function(id, sdp) {
     console.log('Answer send: ' + id);
     this.peer.createAnswer(function(description) {
+        console.log('Answered SDP:' + description);
         this.peer.setLocalDescription(description, function() {
             websocket.send(JSON.stringify({
                 "type":     PeerConnection.MESSAGE_TYPE_SDP,
@@ -69,7 +84,14 @@ PeerConnection.prototype.createAnswer = function(id, sdp) {
                 "from":     uuid
             }));
         });
-        this.observer.onConnectionCompleted();
+        this.personID = id;
+        this.peer.ondatachannel  = function(evt) {
+            console.log('Handled datachannel event');
+            this.dataChannel = evt.channel;
+            this.initChannel();
+            this.observer.onConnectionCompleted();
+        }.bind(this);
+
     }.bind(this));
 };
 
@@ -85,6 +107,11 @@ PeerConnection.prototype.getUserMedia = function() {
         },
         this.errorHandler
     );
+};
+
+PeerConnection.prototype.createDataChannel = function() {
+    this.dataChannel = this.peer.createDataChannel('RTCPeerDataChannel');
+    this.initChannel();
 };
 
 PeerConnection.prototype.errorHandler = function(err) {

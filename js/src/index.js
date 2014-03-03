@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
 //= require MemberList.js
 //= require MemberChat.js
 //= require UUID.js
+//= require DragDrop.js
 
     // Check connection name
     do {
@@ -56,5 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
             peer.close();
         } catch ( e ) {} 
     });
+
+    window.peer = peer;
 }, false);
 
