@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', function() {
 //= require MemberChat.js
 //= require UUID.js
 //= require DragDrop.js
+//= require StreamSender.js
+//= require StreamReceiver.js
 
     // Check connection name
     do {
@@ -39,14 +41,6 @@ document.addEventListener('DOMContentLoaded', function() {
     memberList = new MemberList(members);
     chat       = new MemberChat(document.getElementById('chatSection'));
     uuid       = (new UUID())+""; // get string
-
-    websocket.onopen = function() {
-        websocket.send(JSON.stringify({
-            "type":       PeerConnection.MEMBER_ADDED,
-            "accessName": accessName,
-            "uuid":       uuid
-        }));
-    };
 
     window.addEventListener('unload', function() {
         websocket.send(JSON.stringify({

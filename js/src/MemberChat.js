@@ -7,7 +7,8 @@ function MemberChat(node) {
     this.input   = null;
     this.stub    = null;
     this.upload  = null;
-    this.channel = null;
+    this.dataChannel   = null;
+    this.streamChanne  = null;
     this.isCompositing = false;
     this.beforePost    = "";
 
@@ -29,8 +30,9 @@ MemberChat.prototype.init = function() {
     this.input.disabled = true;
 };
 
-MemberChat.prototype.start = function(channel) {
-    this.channel            = channel;
+MemberChat.prototype.start = function(dataChannel, streamChannel) {
+    this.dataChannel        = dataChannel;
+    this.streamChannel      = streamChannel;
     this.input.disabled     = false;
     this.node.style.opacity = 1;
 
@@ -39,13 +41,58 @@ MemberChat.prototype.start = function(channel) {
         console.log('file raded');
         console.log(fileData);
 
-        this.channel.send(JSON.stringify({
+        this.dataChannel.sender.send(JSON.stringify({
             "type": "__FILE_REQUESTED__",
             "data": fileData.name
         }));
         this.stackFiles.push(fileData);
         this.createPost(fileData.name + 'を送信中…');
     }.bind(this));
+
+    this.dataChannel.receiver.on('end', function(data) {
+        console.log('datachannel end');
+        var json;
+
+        try {
+            json = JSON.parse(data);
+
+            switch ( json.type ) {
+                case "__TEXT__":
+                    this.createPost(json.data, false);
+                    break;
+
+                case "__FILE_REQUESTED__":
+                    this.confirmFileReceive(json.data);
+                    break;
+
+                case "__FILE_ACCEPTED__":
+                    this.sendStackedFile(json.data);
+                    this.createPost(json.data + 'を送信しました。', true);
+                    break;
+
+                case "__FILE_REJECTED__":
+                    this.rejectStackFile(json.data);
+                    this.createPost(json.data + 'の送信は拒否されました。', true);
+                    break;
+            }
+        } catch ( e ) {
+            console.log(e);
+            this.createPost(data);
+        }
+    }.bind(this));
+
+    this.streamChannel.receiver.on('end', function(aryBuf) {
+        this.createPost(aryBuf);
+    }.bind(this));
+
+    // debug
+    this.dataChannel.sender.on('sended', function() {
+        console.log('data sended');
+    });
+    this.dataChannel.receiver.on('data', function(data) {
+        console.log('datachannel received');
+        console.log(data);
+    });
 };
 
 MemberChat.prototype.end = function() {
@@ -79,8 +126,8 @@ MemberChat.prototype.handleEvent = function(evt) {
             }
             this.beforePost  = value;
             this.input.value = "";
-            this.channel.send(JSON.stringify({
-                "type": "text",
+            this.dataChannel.sender.send(JSON.stringify({
+                "type": "__TEXT__",
                 "data": value
             }));
             this.createPost(value, true);
@@ -134,13 +181,13 @@ MemberChat.prototype.confirmFileReceive = function(fileName) {
 
     if ( conf ) {
         this.fileReceiveAccepted = fileName;
-        this.channel.send(JSON.stringify({
+        this.dataChannel.sender.send(JSON.stringify({
             "type": "__FILE_ACCEPTED__",
             "data": fileName
         }));
     } else {
         this.fileReceiveAccepted = true;
-        this.channel.send(JSON.stringify({
+        this.dataChannel.sender.send(JSON.stringify({
             "type": "__FILE_REJECTED__",
             "data": fileName
         }));
@@ -151,7 +198,6 @@ MemberChat.prototype.sendStackedFile = function(fileName) {
     console.log(this.stackFiles);
     var file = this.getFile(fileName);
 
-
     console.log('stacked file');
     console.log(file);
     if ( ! file ) {
@@ -159,7 +205,7 @@ MemberChat.prototype.sendStackedFile = function(fileName) {
         return;
     }
 
-    this.channel.send(file.buffer);
+    this.streamChannel.sender.send(file.buffer);
 };
 
 MemberChat.prototype.getFile = function(fileName) {

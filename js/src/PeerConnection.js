@@ -6,8 +6,9 @@ function PeerConnection(observer) {
     this.peer        = new webkitRTCPeerConnection({"iceServers": server});
     this.connected   = false;
     this.personID    = null;
-    this.dataChannel = null;
-    this.fileChannel = null;
+
+    this.dataChannel   = { sender: null, receiver: null };
+    this.streamChannel = { sender: null, receiver: null };
 
     this.init();
     this.getUserMedia();
@@ -29,16 +30,20 @@ PeerConnection.prototype.init = function() {
     websocket.onmessage           = this.observer.onWebSocketMessage;
 };
 
-PeerConnection.prototype.initDataChannel = function() {
+PeerConnection.prototype.initDataChannel = function(channel) {
     console.log('Initialized data channel');
-    this.dataChannel.onopen    = this.observer.onDataChannelOpened  || function() {};
-    this.dataChannel.onmessage = this.observer.onDataChannelMessage || function() {};
+    var that    = this;
+
+    this.dataChannel.sender   = StreamSender.create(channel);
+    this.dataChannel.receiver = StreamReceiver.create(channel);
 };
 
-PeerConnection.prototype.initFileChannel = function() {
+PeerConnection.prototype.initFileChannel = function(channel) {
     console.log('Initialized file channel');
-    this.fileChannel.onopen    = this.observer.onFileChannelOpened  || function() {};
-    this.fileChannel.onmessage = this.observer.onFileChannelMessage || function() {};
+    var that    = this;
+
+    this.streamChannel.sender   = StreamSender.create(channel);
+    this.streamChannel.receiver = StreamReceiver.create(channel);
 };
 
 PeerConnection.prototype.close = function() {
@@ -63,8 +68,8 @@ PeerConnection.prototype.addIceCandidate = function(candidate) {
 PeerConnection.prototype.createOffer = function(id) {
     console.log('Offer send: ' + id);
     // crate data channel
-    this.createDataChannel();
-    this.createFileChannel();
+    this.initDataChannel(this.peer.createDataChannel('RTCDataConnection'));
+    this.initFileChannel(this.peer.createDataChannel('RTCStreamConnection'));
     this.peer.createOffer(function(description) {
         console.log('Offered SDP:' + description);
         this.peer.setLocalDescription(description, function() {
@@ -84,6 +89,8 @@ PeerConnection.prototype.createAnswer = function(id, sdp) {
     console.log('Answer send: ' + id);
     this.peer.createAnswer(function(description) {
         console.log('Answered SDP:' + description);
+        var bit = 0x0;
+
         this.peer.setLocalDescription(description, function() {
             websocket.send(JSON.stringify({
                 "type":     PeerConnection.MESSAGE_TYPE_SDP,
@@ -97,17 +104,20 @@ PeerConnection.prototype.createAnswer = function(id, sdp) {
             console.log('Handled datachannel event');
             console.log(evt);
             switch ( evt.channel.label ) {
-                case 'RTCPeerDataChannel':
-                    this.dataChannel = evt.channel;
-                    this.initDataChannel();
+                case 'RTCDataConnection':
+                    this.initDataChannel(evt.channel);
+                    bit |= 0x1;
                     break;
-                
-                case 'RTCPeerFileChannel':
-                    this.fileChannel = evt.channel;
-                    this.initFileChannel();
+
+                case 'RTCStreamConnection':
+                    this.initFileChannel(evt.channel);
+                    bit |= 0x2;
                     break;
             }
-            this.observer.onConnectionCompleted();
+            
+            if ( (bit ^ 0x3) === 0 ) {
+                this.observer.onConnectionCompleted();
+            }
         }.bind(this);
 
     }.bind(this));
@@ -122,20 +132,16 @@ PeerConnection.prototype.getUserMedia = function() {
             console.log('Media loaded');
             local.src = window.webkitURL.createObjectURL(stream);
             peer.addStream(stream);
+            websocket.send(JSON.stringify({
+                "type":       PeerConnection.MEMBER_ADDED,
+                "accessName": accessName,
+                "uuid":       uuid
+            }));
         },
         this.errorHandler
     );
 };
 
-PeerConnection.prototype.createDataChannel = function() {
-    this.dataChannel = this.peer.createDataChannel('RTCPeerDataChannel');
-    this.initDataChannel();
-};
-
-PeerConnection.prototype.createFileChannel = function() {
-    this.fileChannel = this.peer.createDataChannel('RTCPeerFileChannel');
-    this.initFileChannel();
-};
 
 PeerConnection.prototype.errorHandler = function(err) {
     console.log(err.name + ':' + err.message);

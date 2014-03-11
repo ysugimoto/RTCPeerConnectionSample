@@ -73,7 +73,7 @@ Observer.onWebSocketMessage = function(evt) {
 };
 Observer.onConnectionCompleted = function() {
     console.log('Peer connection succeed!');
-    chat.start(this.dataChannel);
+    chat.start(this.dataChannel, this.streamChannel);
     remote.volume = 1;
     local.classList.add('connected');
 };
