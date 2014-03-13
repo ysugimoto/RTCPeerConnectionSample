@@ -19,7 +19,7 @@ DragDrop.prototype.start = function(fn) {
     doc.addEventListener('dragenter', this, false);
     doc.addEventListener('dragover',  this, false);
     doc.addEventListener('dragleave', this, false);
-    
+
     // Drop element event handle
     drop.addEventListener('dragenter', this.cancelEvent, false);
     drop.addEventListener('dragover',  this.cancelEvent, false);
@@ -59,12 +59,13 @@ DragDrop.prototype.handleEvent = function(evt) {
 };
 
 DragDrop.prototype.handleDropFile = function(file) {
-    var fr = new FileReader(),
+    var fr       = new FileReader(),
         fileData = {name: file.fileName || file.name},
-        handler = this.ondrop;
+        handler  = this.ondrop;
 
     fr.onload = function(evt) {
         fileData.buffer = evt.target.result;
+        fileData.size   = evt.target.result.byteLength;
         handler(fileData);
     };
 

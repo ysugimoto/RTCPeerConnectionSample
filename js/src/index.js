@@ -18,8 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
 //= require MemberChat.js
 //= require UUID.js
 //= require DragDrop.js
-//= require StreamSender.js
-//= require StreamReceiver.js
+//= require DataStream.js
 
     // Check connection name
     do {

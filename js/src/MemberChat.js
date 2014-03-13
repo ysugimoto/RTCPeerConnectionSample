@@ -8,7 +8,7 @@ function MemberChat(node) {
     this.stub    = null;
     this.upload  = null;
     this.dataChannel   = null;
-    this.streamChanne  = null;
+    this.streamChannel = null;
     this.isCompositing = false;
     this.beforePost    = "";
 
@@ -41,15 +41,16 @@ MemberChat.prototype.start = function(dataChannel, streamChannel) {
         console.log('file raded');
         console.log(fileData);
 
-        this.dataChannel.sender.send(JSON.stringify({
+        this.dataChannel.send(JSON.stringify({
             "type": "__FILE_REQUESTED__",
-            "data": fileData.name
+            "data": fileData.name,
+            "size": fileData.size
         }));
         this.stackFiles.push(fileData);
         this.createPost(fileData.name + 'を送信中…');
     }.bind(this));
 
-    this.dataChannel.receiver.on('end', function(data) {
+    this.dataChannel.on('end', function(data) {
         console.log('datachannel end');
         var json;
 
@@ -62,7 +63,7 @@ MemberChat.prototype.start = function(dataChannel, streamChannel) {
                     break;
 
                 case "__FILE_REQUESTED__":
-                    this.confirmFileReceive(json.data);
+                    this.confirmFileReceive(json.data, json.size);
                     break;
 
                 case "__FILE_ACCEPTED__":
@@ -81,15 +82,17 @@ MemberChat.prototype.start = function(dataChannel, streamChannel) {
         }
     }.bind(this));
 
-    this.streamChannel.receiver.on('end', function(aryBuf) {
+    this.streamChannel.on('end', function(aryBuf) {
+        console.log('stream received');
+        console.log(aryBuf);
         this.createPost(aryBuf);
     }.bind(this));
 
     // debug
-    this.dataChannel.sender.on('sended', function() {
+    this.dataChannel.on('sended', function() {
         console.log('data sended');
     });
-    this.dataChannel.receiver.on('data', function(data) {
+    this.dataChannel.on('data', function(data) {
         console.log('datachannel received');
         console.log(data);
     });
@@ -126,16 +129,11 @@ MemberChat.prototype.handleEvent = function(evt) {
             }
             this.beforePost  = value;
             this.input.value = "";
-            this.dataChannel.sender.send(JSON.stringify({
+            this.dataChannel.send(JSON.stringify({
                 "type": "__TEXT__",
                 "data": value
             }));
             this.createPost(value, true);
-            //websocket.send(JSON.stringify({
-            //    "type": PeerConnection.MESSAGE_TYPE_CHAT,
-            //    "data": value,
-            //    "from": uuid
-            //}));
             break;
 
         case 'compositionstart':
@@ -151,19 +149,22 @@ MemberChat.prototype.handleEvent = function(evt) {
 MemberChat.prototype.createPost = function(value, isSelf) {
     var div = this.stub.cloneNode(),
         a,
+        file,
         blob;
 
     if ( isSelf ) {
         div.classList.add('self');
     }
 
-    if ( value instanceof ArrayBuffer ) {
+    if ( value instanceof Uint8Array ) { // TypedArray case
+        file = this.fileReceiveAccepted;
         a = doc.createElement('a');
-        a.download = this.fileReceiveAccepted;
+        a.download = file[0];
         blob = new Blob([value]);
         a.href = window.webkitURL.createObjectURL(blob);
-        a.appendChild(doc.createTextNode(this.fileReceiveAccepted));
-        div.appendChild(a);
+        a.appendChild(doc.createTextNode(this.fileReceiveAccepted[0] + '(約' + this.formatFileSize(file[1]) + ')'));
+        file[2].normalize();
+        file[2].replaceChild(a, file[2].firstChild);
         this.fileReceiveAccepted = false;
     } else {
         div.appendChild(doc.createTextNode(value));
@@ -174,24 +175,42 @@ MemberChat.prototype.createPost = function(value, isSelf) {
     } else {
         this.post.appendChild(div);
     }
+
+    return div;
 };
 
-MemberChat.prototype.confirmFileReceive = function(fileName) {
-    var conf = confirm(fileName + 'の送信要求が届いています。受信しますか？');
+MemberChat.prototype.confirmFileReceive = function(fileName, fileSize) {
+    var size = this.formatFileSize(fileSize),
+        conf = confirm(fileName + '（約' + size + '）の送信要求が届いています。受信しますか？'),
+        post;
 
     if ( conf ) {
-        this.fileReceiveAccepted = fileName;
-        this.dataChannel.sender.send(JSON.stringify({
+        post = this.createPost(fileName + 'を受信中…(0/' + fileSize + ')');
+        this.fileReceiveAccepted = [fileName, fileSize, post];
+        this.dataChannel.send(JSON.stringify({
             "type": "__FILE_ACCEPTED__",
             "data": fileName
         }));
     } else {
-        this.fileReceiveAccepted = true;
-        this.dataChannel.sender.send(JSON.stringify({
+        this.fileReceiveAccepted = false;
+        this.dataChannel.send(JSON.stringify({
             "type": "__FILE_REJECTED__",
             "data": fileName
         }));
     }
+};
+
+MemberChat.prototype.formatFileSize = function(size) {
+    var suffix = ["Byte", "KB", "MB", "GB", "TB"],
+        index  = 0,
+        byte   = 1024;
+
+    while ( size > byte ) {
+        size /= byte;
+        ++index;
+    }
+
+    return (size|0) + suffix[index];
 };
 
 MemberChat.prototype.sendStackedFile = function(fileName) {
@@ -205,7 +224,7 @@ MemberChat.prototype.sendStackedFile = function(fileName) {
         return;
     }
 
-    this.streamChannel.sender.send(file.buffer);
+    this.streamChannel.send(file.buffer);
 };
 
 MemberChat.prototype.getFile = function(fileName) {

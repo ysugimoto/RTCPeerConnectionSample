@@ -7,8 +7,8 @@ function PeerConnection(observer) {
     this.connected   = false;
     this.personID    = null;
 
-    this.dataChannel   = { sender: null, receiver: null };
-    this.streamChannel = { sender: null, receiver: null };
+    this.dataChannel   = null;
+    this.streamChannel = null;
 
     this.init();
     this.getUserMedia();
@@ -32,18 +32,12 @@ PeerConnection.prototype.init = function() {
 
 PeerConnection.prototype.initDataChannel = function(channel) {
     console.log('Initialized data channel');
-    var that    = this;
-
-    this.dataChannel.sender   = StreamSender.create(channel);
-    this.dataChannel.receiver = StreamReceiver.create(channel);
+    this.dataChannel = DataStream.create(channel);
 };
 
 PeerConnection.prototype.initFileChannel = function(channel) {
     console.log('Initialized file channel');
-    var that    = this;
-
-    this.streamChannel.sender   = StreamSender.create(channel);
-    this.streamChannel.receiver = StreamReceiver.create(channel);
+    this.streamChannel = DataStream.create(channel);
 };
 
 PeerConnection.prototype.close = function() {
